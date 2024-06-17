@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI - Mensch Kollaboration</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .input-container, .button-container {
+            margin-top: 10px;
+            width: 640px; /* Match the canvas width */
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        input[type="text"] {
+            border: 1px solid black;
+            padding: 5px;
+            font-size: 16px;
+            width: 200px; /* Make the input boxes slightly bigger */
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #clearButton {
+            background-color: #ffcccc; /* Light red */
+            border: 1px solid red;
+        }
+
+        #clearButton:active {
+            background-color: #ff9999; /* Darker red */
+        }
+
+        #runButton {
+            background-color: #cce6ff; /* Light blue */
+            border: 1px solid blue;
+            border-radius: 12px; /* Rounded corners */
+            padding: 15px 30px; /* Increase size */
+            font-size: 20px; /* Increase font size */
+        }
+
+        #runButton:active {
+            background-color: #99ccff; /* Darker blue */
+        }
+
+        #finishButton {
+            background-color: #ccffcc; /* Light green */
+            border: 1px solid green;
+        }
+
+        #finishButton:active {
+            background-color: #99ff99; /* Darker green */
+        }
+
+        #loadingOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 640px; /* Match the canvas width */
+            height: 640px; /* Match the canvas height */
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+
+        #loadingCanvas {
+            width: 640px;
+            height: 640px;
+        }
+
+        .leaderboard {
+            margin-top: 20px;
+            width: 640px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard th, .leaderboard td {
+            border: 1px solid black;
+            padding: 8px;
+        }
+
+        .leaderboard th {
+            background-color: #f2f2f2;
+        }
+
+        .gallery {
+            margin-top: 20px;
+            width: 640px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+        }
+
+        .gallery-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .gallery img {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="container">KI - Mensch Kollaboration</h1>
+    <div class="input-container">
+        <div>
+            <label for="artistName">Künstler/Name:</label>
+            <input type="text" id="artistName" name="artistName" maxlength="20">
+        </div>
+        <div>
+            <label for="title">Titel:</label>
+            <input type="text" id="title" name="title" maxlength="20">
+        </div>
+        <div>
+            <div id="totalScore">Score: 0.00</div>
+        </div>
+    </div>
+    <div style="position: relative; width: 640px; margin: 0 auto;">
+        <canvas id="canvas" width="640" height="640"></canvas>
+        <div id="loadingOverlay">
+            <canvas id="loadingCanvas" width="640" height="640"></canvas>
+        </div>
+    </div>
+    <div class="button-container">
+        <button id="clearButton">Löschen</button>
+        <button id="runButton">K.I.</button>
+        <button id="finishButton">Fertig</button>
+    </div>
+
+    <div id="gallery" class="gallery">
+        <h2>Top 6 Artworks</h2>
+        <div class="gallery-row">
+            <img id="gallery-img-1" src="" alt="Artwork 1">
+            <img id="gallery-img-2" src="" alt="Artwork 2">
+            <img id="gallery-img-3" src="" alt="Artwork 3">
+        </div>
+        <div class="gallery-row">
+            <img id="gallery-img-4" src="" alt="Artwork 4">
+            <img id="gallery-img-5" src="" alt="Artwork 5">
+            <img id="gallery-img-6" src="" alt="Artwork 6">
+        </div>
+    </div>
+
+    <div class="leaderboard">
+        <h2>Leaderboard</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Platz</th>
+                    <th>Name</th>
+                    <th>Titel Kunstwerk</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+                <!-- Leaderboard entries will be injected here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clearButton');
+        const runButton = document.getElementById('runButton');
+        const finishButton = document.getElementById('finishButton');
+        const totalScore = document.getElementById('totalScore');
+        const artistNameInput = document.getElementById('artistName');
+        const titleInput = document.getElementById('title');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingCanvas = document.getElementById('loadingCanvas');
+        const loadingCtx = loadingCanvas.getContext('2d');
+        const leaderboardBody = document.getElementById('leaderboardBody');
+
+        let isDrawing = false;
+        let loadingAnimation;
+        let lastX = 0;
+        let lastY = 0;
+        let lastTime = 0;
+
+        function initializeCanvas() {
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        initializeCanvas();
+
+        canvas.addEventListener('mousedown', (event) => {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = event.clientX - rect.left;
+            lastY = event.clientY - rect.top;
+            lastTime = Date.now();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            ctx.beginPath();
+        });
+
+        canvas.addEventListener('mousemove', draw);
+
+        function draw(event) {
+            if (!isDrawing) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const currentTime = Date.now();
+
+            const deltaX = x - lastX;
+            const deltaY = y - lastY;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const time = currentTime - lastTime;
+            const speed = distance / time;
+
+            const minLineWidth = 1;
+            const maxLineWidth = 10;
+            const minSpeed = 0.1;
+            const maxSpeed = 1;
+
+            const lineWidth = Math.max(minLineWidth, maxLineWidth - (speed - minSpeed) / (maxSpeed - minSpeed) * (maxLineWidth - minLineWidth));
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'black';
+
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            lastX = x;
+            lastY = y;
+            lastTime = currentTime;
+        }
+
+        function startLoadingAnimation() {
+            loadingOverlay.style.display = 'flex';
+            loadingAnimation = requestAnimationFrame(drawLoadingAnimation);
+        }
+
+        function stopLoadingAnimation() {
+            cancelAnimationFrame(loadingAnimation);
+            loadingCtx.clearRect(0, 0, loadingCanvas.width, loadingCanvas.height);
+            loadingOverlay.style.display = 'none';
+        }
+
+        function drawLoadingAnimation() {
+            loadingCtx.clearRect(0, 0, loadingCanvas.width, loadingCanvas.height);
+
+            for (let i = 0; i < 5; i++) {
+                drawRandomBezierCurve(loadingCtx);
+            }
+
+            loadingAnimation = requestAnimationFrame(drawLoadingAnimation);
+        }
+
+        function drawRandomBezierCurve(ctx) {
+            const startX = Math.random() * loadingCanvas.width;
+            const startY = Math.random() * loadingCanvas.height;
+            const cp1X = Math.random() * loadingCanvas.width;
+            const cp1Y = Math.random() * loadingCanvas.height;
+            const cp2X = Math.random() * loadingCanvas.width;
+            const cp2Y = Math.random() * loadingCanvas.height;
+            const endX = Math.random() * loadingCanvas.width;
+            const endY = Math.random() * loadingCanvas.height;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.bezierCurveTo(cp1X, cp1Y, cp2X, cp2Y, endX, endY);
+            ctx.strokeStyle = `rgba(0, 0, 0, ${Math.random()})`;
+            ctx.lineWidth = Math.random() * 5;
+            ctx.stroke();
+        }
+
+        clearButton.addEventListener('click', async () => {
+            await fetch('/new_session', { method: 'POST' });
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            initializeCanvas();
+            totalScore.textContent = 'Score: 0.00';
+        });
+
+        runButton.addEventListener('click', async () => {
+            startLoadingAnimation();
+            const imageUrl = canvas.toDataURL('image/png');
+            const response = await fetch('/run_algo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageUrl })
+            });
+
+            const result = await response.json();
+            totalScore.textContent = `Score: ${(result.total_score).toFixed(2)}`;
+
+            const finalImage = new Image();
+            finalImage.src = result.final_image;
+            finalImage.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(finalImage, 0, 0);
+                stopLoadingAnimation();
+                loadTopArtworks(); // Load top artworks after running the algorithm
+            };
+        });
+
+        finishButton.addEventListener('click', async () => {
+            const imageUrl = canvas.toDataURL('image/png');
+            let artistName = artistNameInput.value.trim();
+            let title = titleInput.value.trim();
+            const totalScoreValue = parseFloat(totalScore.textContent.split(": ")[1]);
+
+            if (!artistName) artistName = "-";
+            if (!title) title = "-";
+
+            const response = await fetch('/finish_artwork', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageUrl, artistName, title, totalScore: totalScoreValue })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                alert('Artwork saved successfully!');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                initializeCanvas();
+                artistNameInput.value = '';
+                titleInput.value = '';
+                totalScore.textContent = 'Score: 0.00';
+                await fetch('/new_session', { method: 'POST' });
+                loadLeaderboard();
+                loadTopArtworks(); // Load top artworks after finishing artwork
+            } else {
+                alert('Failed to save artwork.');
+            }
+        });
+
+        function loadLeaderboard() {
+            fetch('/leaderboard')
+                .then(response => response.json())
+                .then(data => {
+                    leaderboardBody.innerHTML = '';
+                    data.forEach((entry, index) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${entry.name}</td>
+                            <td>${entry.title}</td>
+                            <td>${entry.score}</td>
+                        `;
+                        leaderboardBody.appendChild(row);
+                    });
+                });
+        }
+
+        function loadTopArtworks() {
+            fetch('/leaderboard')
+                .then(response => response.json())
+                .then(data => {
+                    const topArtworks = data.slice(0, 6);
+                    topArtworks.forEach((artwork, index) => {
+                        const imgElement = document.getElementById(`gallery-img-${index + 1}`);
+                        const sanitizedTitle = encodeURIComponent(artwork.title);
+                        const sanitizedName = encodeURIComponent(artwork.name);
+                        imgElement.src = `/FinishedArtworks/${artwork.score}__${sanitizedName}__${sanitizedTitle}__${artwork.timestamp}.png`;
+                        imgElement.alt = `${artwork.title} by ${artwork.name}`;
+                    });
+                });
+        }
+
+        loadLeaderboard(); // Load the leaderboard on page load
+        loadTopArtworks(); // Load the top artworks on page load
+    </script>
+</body>
+</html>

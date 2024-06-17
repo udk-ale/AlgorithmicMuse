@@ -1,0 +1,10 @@
+pillow==10.3.0
+scipy==1.10.1
+gymnasium
+numpy==1.24.4
+matplotlib==3.4.3
+matplotlib-inline==0.1.3
+ultralytics==8.2.20
+Flask==3.0.3
+Flask-Session==0.8.0
+requests==2.32.2
